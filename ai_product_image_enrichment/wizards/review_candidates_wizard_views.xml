@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="aipie_review_candidates_wizard_form" model="ir.ui.view">
+        <field name="name">aipie.review.candidates.wizard.form</field>
+        <field name="model">aipie.review.candidates.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Bulk Candidate Review">
+                <group>
+                    <field name="job_id"/>
+                    <field name="confidence_threshold"/>
+                    <field name="role_filter"/>
+                </group>
+                <footer>
+                    <button name="action_approve_high_confidence" type="object"
+                            string="Approve High-Confidence" class="btn-primary"/>
+                    <button name="action_apply_approved" type="object"
+                            string="Apply All Approved"/>
+                    <button special="cancel" string="Close"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

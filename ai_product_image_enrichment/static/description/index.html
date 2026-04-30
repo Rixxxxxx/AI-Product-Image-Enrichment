@@ -1,0 +1,187 @@
+<!--
+  Odoo App Store listing page.
+  Replace placeholder images with real screenshots before publishing:
+    - banner.png (1200x600 hero image, ideally a before/after shop grid)
+    - screenshot_*.png (workflow shots: settings, kanban candidate review, product detail page)
+  Replace contact email and pricing as needed.
+-->
+<section class="oe_container">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">AI Product Image Enrichment</h2>
+    <h3 class="oe_slogan" style="color: #875A7B;">
+      The complete catalog imagery platform for multi-brand Odoo shops.
+    </h3>
+    <div class="oe_picture">
+      <img src="banner.png" alt="Before and after: chaotic shop grid → uniformly normalized" style="max-width: 100%;"/>
+    </div>
+  </div>
+</section>
+
+<section class="oe_container oe_dark">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">What it does</h2>
+    <h3 class="oe_slogan">Three things at once, in one module.</h3>
+    <div class="oe_span4">
+      <h4>1. Find professional images</h4>
+      <p>Reads manufacturer websites with Claude AI to identify and download
+      real product photography. No per-vendor scraping rules. Adapts to new
+      brands automatically.</p>
+    </div>
+    <div class="oe_span4">
+      <h4>2. Remove + normalize</h4>
+      <p>Every main image gets the background removed, trimmed to content,
+      and centered on a uniform 1920×1920 transparent canvas. Shop grid looks
+      like one studio shot the whole catalog.</p>
+    </div>
+    <div class="oe_span4">
+      <h4>3. Gallery, intelligently</h4>
+      <p>Lifestyle, in-use, and detail shots become gallery images on the
+      product detail page — where context belongs. Per-category opt-in so
+      consumables don't accumulate clutter.</p>
+    </div>
+  </div>
+</section>
+
+<section class="oe_container">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">How it's different from background-remover modules</h2>
+    <table class="table table-striped" style="font-size: 14px;">
+      <thead>
+        <tr>
+          <th></th>
+          <th style="text-align: center;">Background-remover modules</th>
+          <th style="text-align: center;">This module</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Removes background</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+        <tr><td>Trims, centers, applies uniform padding</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        <tr><td><strong>Discovers images on manufacturer websites</strong></td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        <tr><td>Reads pages with AI (no scraping rules)</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        <tr><td><strong>Self-learning recipe cache</strong> — AI cost asymptotes to zero</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        <tr><td>Reads brand from existing product attribute</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        <tr><td>Strict brand-domain filter (no marketplace junk)</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        <tr><td>Per-category gallery opt-in</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        <tr><td>Manual review queue with confidence scoring</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        <tr><td>Hash-based skip-if-unchanged</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+        <tr><td>Original backup + revert button</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="oe_container oe_dark">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">How it works</h2>
+
+    <h3 style="color: #875A7B;">Flow A — Normalize existing images</h3>
+    <p>Run on your existing catalog to make every product visually uniform.</p>
+    <ol>
+      <li>Module reads each product's main image</li>
+      <li>Detects background quality with a fast pixel heuristic + Claude vision for borderline cases</li>
+      <li>Removes background → transparent PNG</li>
+      <li>Trims, scales, centers on a uniform 1920×1920 canvas with consistent padding</li>
+      <li>Writes back to <code>image_1920</code> — Odoo's standard derivatives auto-update</li>
+    </ol>
+    <p>Result: every product card in <code>/shop</code> shows the product at the same proportional size and position.</p>
+
+    <h3 style="color: #875A7B;">Flow B — AI image discovery</h3>
+    <p>Run on products missing imagery, or to add gallery shots.</p>
+    <ol>
+      <li><strong>Sitemap-first discovery</strong> — tries <code>manufacturer.com/sitemap.xml</code> directly. Falls back to Brave / Google search if needed.</li>
+      <li><strong>Robots.txt-respecting fetch</strong> with per-domain rate limiting.</li>
+      <li><strong>Claude classification</strong> — sends <code>&lt;img&gt;</code> inventory + product context. Conservative bias against logos, banners, and unrelated images.</li>
+      <li><strong>Strict brand-domain filter</strong> — only accepts images hosted on the manufacturer's own domain or CDN. Falls back gracefully if the brand site is unreachable.</li>
+      <li><strong>Manual review queue</strong> — every candidate goes to a kanban board with original + normalized preview side-by-side. Approve, reject, or apply with one click.</li>
+    </ol>
+
+    <h3 style="color: #875A7B;">Self-learning recipe cache</h3>
+    <p>After 5 successful AI classifications on a domain, the module asks Claude to generate CSS selectors that distill what it learned. Future products on that domain skip the AI call entirely. <strong>Anthropic API cost asymptotes toward zero as your catalog grows.</strong></p>
+  </div>
+</section>
+
+<section class="oe_container">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">Background removal: two paths</h2>
+    <p>You choose; the module supports both interchangeably.</p>
+    <table class="table table-striped">
+      <thead>
+        <tr><th>Path</th><th>Cost</th><th>Setup</th><th>Best for</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Photoroom API</strong></td>
+          <td>~$0.02/image</td>
+          <td>Paste API key in Settings</td>
+          <td>Zero infrastructure. Pay per use.</td>
+        </tr>
+        <tr>
+          <td><strong>Self-hosted rembg</strong></td>
+          <td>Free</td>
+          <td>Install <code>rembg</code> + <code>onnxruntime</code> in Odoo venv</td>
+          <td>Privacy, high-volume budgets</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="oe_container oe_dark">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">What's included</h2>
+    <ul>
+      <li><strong>6 Odoo models</strong>: enrichment job, image candidate, scraping recipe, AI usage log, step log, plus product extension</li>
+      <li><strong>4 wizards</strong>: enrich products (AI), normalize-only, bulk candidate review, preview normalization</li>
+      <li><strong>Dedicated menu</strong> with full job, candidate, log, and recipe management</li>
+      <li><strong>Settings panel</strong> — canvas size, padding, white-BG threshold, budget cap, alert email, gallery opt-in, brand attribute name</li>
+      <li><strong><code>ir.cron</code>-based async processing</strong> — chunks of 5 products per minute, Postgres advisory lock for safe concurrency</li>
+      <li><strong>Per-category gallery toggle + per-product override</strong> — chemicals get one image, scrubbers get five</li>
+      <li><strong>Budget enforcement</strong> — monthly USD cap with email alerts at 80% and auto-pause at 100%</li>
+      <li><strong>XML-RPC API</strong> for headless integrations</li>
+      <li><strong>Original-image backup + revert button</strong> on every product</li>
+    </ul>
+  </div>
+</section>
+
+<section class="oe_container">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">Anti-footgun defaults</h2>
+    <ul>
+      <li>Manual review queue is the default — auto-apply is opt-in</li>
+      <li>Confidence threshold defaults to 0.7 (conservative)</li>
+      <li>Monthly Anthropic budget defaults to $50 (configurable)</li>
+      <li>Per-domain rate limit (2s) — robots.txt-compliant always</li>
+      <li>Idempotent jobs — re-running on already-enriched products is a no-op</li>
+      <li>Backup field on every modified product — one-click revert</li>
+    </ul>
+  </div>
+</section>
+
+<section class="oe_container oe_dark">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">Technical requirements</h2>
+    <ul>
+      <li><strong>Odoo 19</strong> (Community or Enterprise)</li>
+      <li><strong>Required Python packages</strong> in Odoo venv:
+        <code>requests</code>, <code>beautifulsoup4</code>, <code>lxml</code>,
+        <code>Pillow</code>, <code>numpy</code>, <code>anthropic</code></li>
+      <li><strong>Optional Python packages</strong> (only for self-hosted background removal):
+        <code>rembg</code>, <code>onnxruntime</code></li>
+      <li><strong>API keys</strong>: Anthropic + a search provider (Brave free tier works);
+        Photoroom API key optional</li>
+    </ul>
+    <p style="font-size: 13px; color: #666;">
+      <strong>Self-hosted Odoo:</strong> install via SSH + pip.<br/>
+      <strong>Odoo.sh:</strong> add to your repo's <code>requirements.txt</code> — auto-installed on deploy.<br/>
+      <strong>CloudPepper / managed hosts:</strong> contact your provider's support to add the packages — most handle this routinely.
+    </p>
+  </div>
+</section>
+
+<section class="oe_container">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">Support</h2>
+    <p>Email: <a href="mailto:support@your-website.example">support@your-website.example</a></p>
+    <p>Response within 1 business day for licensing customers.</p>
+  </div>
+</section>

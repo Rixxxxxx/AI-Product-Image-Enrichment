@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.ai_product_image_enrichment</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[1]" position="after">
+                <block title="AI Image Enrichment" id="ai_product_image_enrichment_block">
+                    <setting string="Anthropic API Key" help="Your Claude API key. Stored as ir.config_parameter.">
+                        <field name="aipie_anthropic_api_key" password="True"/>
+                    </setting>
+                    <setting string="Claude Model">
+                        <field name="aipie_anthropic_model"/>
+                    </setting>
+                    <setting string="Search Provider">
+                        <field name="aipie_search_provider"/>
+                        <field name="aipie_search_api_key" password="True"/>
+                    </setting>
+                    <setting string="Photoroom API Key (recommended over rembg)">
+                        <field name="aipie_photoroom_api_key" password="True"/>
+                    </setting>
+                    <setting string="Browserless (SPA fallback, optional)">
+                        <field name="aipie_browserless_api_key" password="True"/>
+                        <field name="aipie_browserless_endpoint"/>
+                    </setting>
+                    <setting string="Reject lifestyle shots as main image"
+                             help="Only studio-quality source images qualify as main. Final output is always transparent PNG.">
+                        <field name="aipie_strict_white_main"/>
+                    </setting>
+                    <setting string="Self-learning Recipe Cache">
+                        <field name="aipie_recipe_cache_enabled"/>
+                    </setting>
+                    <setting string="Brand Attribute Name"
+                             help="Name of the product attribute that holds the manufacturer/brand name. The pipeline reads this attribute to identify the brand for each product.">
+                        <field name="aipie_brand_attribute_name"/>
+                    </setting>
+                    <setting string="Strict brand-domain image filter"
+                             help="Only accept candidate images hosted on a URL whose host contains the brand name. Recommended.">
+                        <field name="aipie_strict_brand_url_match"/>
+                    </setting>
+
+                    <h2>Normalization (visual uniformity)</h2>
+                    <setting string="Target Canvas Size (px)" help="1600 gives crisp PDP zoom while staying under Odoo's 1920 max.">
+                        <field name="aipie_target_canvas_size"/>
+                    </setting>
+                    <setting string="Padding (%)" help="Whitespace around the product. THIS is what makes the shop grid look uniform.">
+                        <field name="aipie_padding_percent"/>
+                    </setting>
+                    <setting string="Background Color">
+                        <field name="aipie_bg_color"/>
+                    </setting>
+                    <setting string="Output Format / Quality">
+                        <field name="aipie_output_format"/>
+                        <field name="aipie_jpeg_quality"/>
+                    </setting>
+                    <setting string="White-BG Detection">
+                        <field name="aipie_white_threshold"/>
+                        <field name="aipie_white_bg_min_percent"/>
+                    </setting>
+                    <setting string="Always Re-Normalize" help="Trim/center/pad even on already-white-BG images. Required for visual uniformity.">
+                        <field name="aipie_force_normalize_existing"/>
+                    </setting>
+                    <setting>
+                        <button name="action_open_preview_normalization" type="object" string="Preview Normalization" class="btn-primary"/>
+                    </setting>
+
+                    <h2>Pipeline</h2>
+                    <setting string="Max Images / Product">
+                        <field name="aipie_max_images_per_product"/>
+                    </setting>
+                    <setting string="Min Image Width (px)">
+                        <field name="aipie_min_image_width"/>
+                    </setting>
+                    <setting string="rembg Model">
+                        <field name="aipie_rembg_model"/>
+                        <button name="action_pre_warm_rembg" type="object" string="Pre-warm rembg model" class="btn-secondary"/>
+                    </setting>
+                    <setting string="Overwrite Existing Main Images">
+                        <field name="aipie_overwrite_existing_main"/>
+                    </setting>
+
+                    <h2>Safety</h2>
+                    <setting string="Require Manual Review">
+                        <field name="aipie_require_review"/>
+                    </setting>
+                    <setting string="Min Confidence">
+                        <field name="aipie_min_confidence_score"/>
+                    </setting>
+                    <setting string="HTTP User-Agent">
+                        <field name="aipie_user_agent"/>
+                    </setting>
+                    <setting string="Per-Domain Delay (s)">
+                        <field name="aipie_request_delay_seconds"/>
+                    </setting>
+                    <setting string="Concurrent Workers">
+                        <field name="aipie_concurrent_workers"/>
+                    </setting>
+                    <setting string="Keep Original Image Backup">
+                        <field name="aipie_keep_backup"/>
+                    </setting>
+
+                    <h2>Cost Control</h2>
+                    <setting string="Monthly Budget (USD)">
+                        <field name="aipie_monthly_ai_budget_usd"/>
+                    </setting>
+                    <setting string="Alert Email">
+                        <field name="aipie_alert_email"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

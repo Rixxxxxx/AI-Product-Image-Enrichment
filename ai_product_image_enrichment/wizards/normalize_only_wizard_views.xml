@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="aipie_normalize_only_wizard_form" model="ir.ui.view">
+        <field name="name">aipie.normalize.only.wizard.form</field>
+        <field name="model">aipie.normalize.only.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Normalize Existing Main Images">
+                <group>
+                    <field name="selection_mode"/>
+                    <field name="category_ids" widget="many2many_tags"
+                           invisible="selection_mode != 'category'"/>
+                    <field name="force_renormalize"/>
+                    <field name="breakdown_sample_size"/>
+                </group>
+                <group string="Estimate">
+                    <field name="estimated_count" readonly="1"/>
+                    <field name="estimated_white_bg" readonly="1"/>
+                    <field name="estimated_rembg" readonly="1"/>
+                </group>
+                <footer>
+                    <button name="action_run" type="object" string="Run" class="btn-primary"/>
+                    <button special="cancel" string="Cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

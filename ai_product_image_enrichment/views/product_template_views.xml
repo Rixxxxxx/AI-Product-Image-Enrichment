@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_template_form_view_inherit" model="ir.ui.view">
+        <field name="name">product.template.form.inherit.ai_product_image_enrichment</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="AI Enrichment" name="aipie_ai_enrichment">
+                    <group>
+                        <group string="Manufacturer Hints">
+                            <field name="aipie_effective_manufacturer" readonly="1"/>
+                            <field name="aipie_manufacturer"
+                                   placeholder="Leave empty — auto from Brand attribute"/>
+                            <field name="aipie_manufacturer_sku"/>
+                        </group>
+                        <group string="Status">
+                            <field name="aipie_enrichment_state"/>
+                            <field name="aipie_enrichment_last_run"/>
+                            <field name="aipie_main_image_normalized"/>
+                            <field name="aipie_main_image_already_white_bg"/>
+                            <field name="aipie_image_count"/>
+                            <field name="aipie_pending_candidate_count"/>
+                            <field name="aipie_gallery_mode"/>
+                            <field name="aipie_gallery_enabled" readonly="1"/>
+                            <field name="aipie_normalization_signature" readonly="1" groups="base.group_no_one"/>
+                        </group>
+                    </group>
+                    <group string="Actions">
+                        <button name="action_aipie_find_images" type="object" string="Find Images (AI)" class="btn-primary"/>
+                        <button name="action_aipie_review_candidates" type="object" string="Review Candidates"/>
+                        <button name="action_aipie_normalize_main" type="object" string="Normalize Main Image"/>
+                        <button name="action_aipie_revert_main" type="object" string="Revert to Original"
+                                confirm="Revert the main image to its pre-normalization backup?"/>
+                        <button name="action_aipie_skip" type="object" string="Mark as Skipped"/>
+                    </group>
+                    <group string="Errors" invisible="not aipie_enrichment_error">
+                        <field name="aipie_enrichment_error" readonly="1" nolabel="1"/>
+                    </group>
+                    <group string="Backup">
+                        <field name="aipie_original_main_image" widget="image"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
