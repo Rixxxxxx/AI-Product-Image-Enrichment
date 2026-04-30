@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_template_form_view_inherit" model="ir.ui.view">
+        <field name="name">product.template.form.inherit.laudie_image_ai</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="AI Enrichment" name="laudie_ai_enrichment">
+                    <group>
+                        <group string="Manufacturer Hints">
+                            <field name="laudie_effective_manufacturer" readonly="1"/>
+                            <field name="laudie_manufacturer"
+                                   placeholder="Leave empty — auto from Brand attribute"/>
+                            <field name="laudie_manufacturer_sku"/>
+                        </group>
+                        <group string="Status">
+                            <field name="laudie_enrichment_state"/>
+                            <field name="laudie_enrichment_last_run"/>
+                            <field name="laudie_main_image_normalized"/>
+                            <field name="laudie_main_image_already_white_bg"/>
+                            <field name="laudie_image_count"/>
+                            <field name="laudie_pending_candidate_count"/>
+                            <field name="laudie_gallery_mode"/>
+                            <field name="laudie_gallery_enabled" readonly="1"/>
+                            <field name="laudie_normalization_signature" readonly="1" groups="base.group_no_one"/>
+                        </group>
+                    </group>
+                    <group string="Actions">
+                        <button name="action_laudie_find_images" type="object" string="Find Images (AI)" class="btn-primary"/>
+                        <button name="action_laudie_review_candidates" type="object" string="Review Candidates"/>
+                        <button name="action_laudie_normalize_main" type="object" string="Normalize Main Image"/>
+                        <button name="action_laudie_revert_main" type="object" string="Revert to Original"
+                                confirm="Revert the main image to its pre-normalization backup?"/>
+                        <button name="action_laudie_skip" type="object" string="Mark as Skipped"/>
+                    </group>
+                    <group string="Errors" invisible="not laudie_enrichment_error">
+                        <field name="laudie_enrichment_error" readonly="1" nolabel="1"/>
+                    </group>
+                    <group string="Backup">
+                        <field name="laudie_original_main_image" widget="image"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="cron_laudie_image_ai_run" model="ir.cron">
+        <field name="name">Laudie AI: Process Enrichment Jobs</field>
+        <field name="model_id" ref="model_laudie_enrichment_job"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_run_jobs()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <record id="cron_laudie_image_ai_budget" model="ir.cron">
+        <field name="name">Laudie AI: Daily Budget Check</field>
+        <field name="model_id" ref="model_laudie_enrichment_job"/>
+        <field name="state">code</field>
+        <field name="code">model._check_budget_and_pause()</field>
+        <field name="interval_number">6</field>
+        <field name="interval_type">hours</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

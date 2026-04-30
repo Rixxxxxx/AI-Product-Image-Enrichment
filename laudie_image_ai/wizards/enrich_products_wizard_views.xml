@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="laudie_enrich_products_wizard_form" model="ir.ui.view">
+        <field name="name">laudie.enrich.products.wizard.form</field>
+        <field name="model">laudie.enrich.products.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Enrich Products">
+                <group>
+                    <field name="selection_mode"/>
+                    <field name="category_ids" widget="many2many_tags"
+                           invisible="selection_mode != 'category'"/>
+                    <field name="pipeline_steps"/>
+                    <field name="dry_run"/>
+                </group>
+                <group string="Estimate">
+                    <field name="estimated_count" readonly="1"/>
+                    <field name="estimated_cost" readonly="1" widget="monetary"/>
+                </group>
+                <footer>
+                    <button name="action_run" type="object" string="Run" class="btn-primary"/>
+                    <button special="cancel" string="Cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

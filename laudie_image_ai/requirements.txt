@@ -1,0 +1,12 @@
+# Python dependencies for laudie_image_ai.
+# Mirrored at the addon level for managed Odoo hosts that look here
+# rather than at the repo root.
+requests>=2.28
+beautifulsoup4>=4.11
+lxml>=4.9
+Pillow>=9.0
+numpy>=1.23
+anthropic>=0.40
+# Background removal — only needed if you skip Photoroom and use local rembg.
+rembg>=2.0
+onnxruntime>=1.16

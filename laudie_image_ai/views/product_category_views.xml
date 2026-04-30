@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_category_form_inherit" model="ir.ui.view">
+        <field name="name">product.category.form.inherit.laudie_image_ai</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="AI Image Enrichment">
+                    <field name="laudie_enable_gallery"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

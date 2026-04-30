@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="laudie_preview_normalization_wizard_form" model="ir.ui.view">
+        <field name="name">laudie.preview.normalization.wizard.form</field>
+        <field name="model">laudie.preview.normalization.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Preview Normalization">
+                <sheet>
+                    <group>
+                        <group string="Sample">
+                            <field name="sample_image" filename="sample_filename"/>
+                            <field name="sample_filename" invisible="1"/>
+                        </group>
+                        <group string="Settings">
+                            <field name="target_canvas_size"/>
+                            <field name="padding_percent"/>
+                            <field name="bg_color"/>
+                            <field name="output_format"/>
+                            <field name="jpeg_quality"
+                                   invisible="output_format != 'jpeg'"/>
+                            <field name="white_threshold"/>
+                            <field name="white_bg_min_percent"/>
+                        </group>
+                    </group>
+                    <group string="Detection Result">
+                        <field name="detected_white_bg" readonly="1"/>
+                        <field name="detected_white_pct" readonly="1"/>
+                        <field name="detected_top_corner_pct" readonly="1"/>
+                        <field name="detected_bottom_corner_pct" readonly="1"/>
+                        <field name="notes" readonly="1"/>
+                    </group>
+                    <group>
+                        <group string="Original">
+                            <field name="sample_image" widget="image" nolabel="1"/>
+                        </group>
+                        <group string="Normalized (transparent PNG)">
+                            <field name="normalized_preview" widget="image" nolabel="1" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Transparency Check (composited on checkerboard)">
+                        <field name="transparency_check_preview" widget="image" nolabel="1" readonly="1"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_preview" type="object" string="Preview" class="btn-primary"/>
+                    <button name="action_save_as_defaults" type="object"
+                            string="Save Settings as Defaults"/>
+                    <button special="cancel" string="Close"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

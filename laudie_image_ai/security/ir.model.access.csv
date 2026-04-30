@@ -1,0 +1,11 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_laudie_candidate_user,laudie.candidate.user,model_laudie_product_image_candidate,sales_team.group_sale_salesman,1,1,1,0
+access_laudie_candidate_mgr,laudie.candidate.mgr,model_laudie_product_image_candidate,sales_team.group_sale_manager,1,1,1,1
+access_laudie_job_mgr,laudie.job.mgr,model_laudie_enrichment_job,sales_team.group_sale_manager,1,1,1,1
+access_laudie_log_mgr,laudie.log.mgr,model_laudie_enrichment_log,sales_team.group_sale_manager,1,1,1,1
+access_laudie_usage_mgr,laudie.usage.mgr,model_laudie_ai_usage_log,sales_team.group_sale_manager,1,0,1,0
+access_laudie_enrich_wiz,laudie.enrich.wiz,model_laudie_enrich_products_wizard,sales_team.group_sale_manager,1,1,1,1
+access_laudie_normalize_wiz,laudie.normalize.wiz,model_laudie_normalize_only_wizard,sales_team.group_sale_manager,1,1,1,1
+access_laudie_review_wiz,laudie.review.wiz,model_laudie_review_candidates_wizard,sales_team.group_sale_manager,1,1,1,1
+access_laudie_preview_wiz,laudie.preview.wiz,model_laudie_preview_normalization_wizard,sales_team.group_sale_manager,1,1,1,1
+access_laudie_recipe_mgr,laudie.recipe.mgr,model_laudie_scraping_recipe,sales_team.group_sale_manager,1,1,1,1
