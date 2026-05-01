@@ -21,7 +21,7 @@ class PreviewNormalizationWizard(models.TransientModel):
     sample_image = fields.Binary(string='Sample Image', required=True)
     sample_filename = fields.Char()
 
-    target_canvas_size = fields.Integer(default=1600)
+    target_canvas_size = fields.Integer(default=1920)
     padding_percent = fields.Integer(default=8)
     bg_color = fields.Char(default='#FFFFFF')
     output_format = fields.Selection([
@@ -103,9 +103,9 @@ class PreviewNormalizationWizard(models.TransientModel):
         )
 
         if has_white:
-            notes.append('Source already had a white background — Photoroom result will be very clean.')
+            notes.append('Source was already a clean studio shot — BG removal will produce the cleanest possible transparent output.')
         else:
-            notes.append('Source has a non-white background — Photoroom doing the heavy lifting.')
+            notes.append('Source has a complex background — BG removal is doing the heavy lifting.')
         notes.append(f'Output: transparent PNG, {len(normalized) // 1024} KB')
 
         # Build a transparency-check composite on a checkerboard

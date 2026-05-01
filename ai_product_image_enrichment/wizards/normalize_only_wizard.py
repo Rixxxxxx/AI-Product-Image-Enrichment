@@ -35,7 +35,7 @@ class NormalizeOnlyWizard(models.TransientModel):
     estimated_white_bg = fields.Integer(
         compute='_compute_breakdown', readonly=True,
         string='Studio shots (clean BG removal)',
-        help='Source images on a clean white background. BG removal will produce '
+        help='Source images on a clean studio background. BG removal will produce '
              'transparent results with no halo artifacts.',
     )
     estimated_complex = fields.Integer(

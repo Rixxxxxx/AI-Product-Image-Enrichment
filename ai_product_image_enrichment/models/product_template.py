@@ -89,8 +89,10 @@ class ProductTemplate(models.Model):
         readonly=True, string='Main Image Normalized',
     )
     aipie_main_image_already_white_bg = fields.Boolean(
-        readonly=True, string='Main Already White-BG',
-        help='Detected: original main image already had a white background, only trim/center/pad applied.',
+        readonly=True, string='Source Was Studio-Quality',
+        help='Detected: the original main image source was already a clean studio shot. '
+             'Final output is always a transparent PNG either way; this just indicates the cleanest '
+             'possible result was achievable for this product.',
     )
     aipie_image_count = fields.Integer(
         compute='_compute_image_count', store=True, string='Image Count',

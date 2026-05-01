@@ -28,13 +28,13 @@ adapts to new manufacturers automatically with zero rule-writing.
 3. **Classify**:
    - If the domain has a learned **scraping recipe** (built after 5 successful AI
      classifications), extract images directly via CSS selectors. Free.
-   - Otherwise, send `<img>` inventory to Claude. Strict white-BG bias for `role=main`.
+   - Otherwise, send `<img>` inventory to Claude. Strict studio-source bias for `role=main`.
 4. **Detect background** — numpy heuristic for the obvious cases; Claude vision
    disambiguates borderline images (border whiteness 70-90%).
 5. **Remove background** if needed — Photoroom API by default (recommended), local
    rembg as fallback.
 6. **Normalize** — trim to content, resize proportionally to a target inner area,
-   center on a uniform white canvas with consistent padding.
+   center on a uniform transparent canvas with consistent padding.
 7. **Hash signature** stored on the product. Re-running with the same image and
    settings is a no-op — no quality loss from repeated JPEG re-encoding.
 
@@ -80,7 +80,7 @@ inference; some CloudPepper plans will OOM. For your full-catalog backfill
 6. If you skipped Photoroom and use rembg: click **Pre-warm rembg model** —
    this downloads ~150MB of model weights.
 7. Click **Preview Normalization** — upload 3-4 sample existing product
-   images of different types (white-bg studio, tight crop, in-context).
+   images of different types (studio shot, tight crop, in-context).
    Tune `padding_percent` and `target_canvas_size` until the output looks right.
    Click **Save Settings as Defaults**.
 
@@ -126,7 +126,7 @@ models.execute_kw(db, uid, pw, 'aipie.enrichment.job',
   switch the model to `claude-sonnet-4-6` for a smarter classifier.
 * **French character encoding in product names:** Postgres + Odoo handle UTF-8
   natively. If you see `?` in API output, your client is the problem.
-* **White-BG detection misfires** (e.g. product is rejected as "non-white" when
+* **Studio-source detection misfires** (e.g. product is rejected as "non-white" when
   it isn't): open Preview Normalization, upload the image, lower
   `white_bg_min_percent` from 85 to 75 or raise `white_threshold` to 250.
 

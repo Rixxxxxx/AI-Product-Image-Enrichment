@@ -108,7 +108,8 @@ class ResConfigSettings(models.TransientModel):
     # Normalization
     aipie_target_canvas_size = fields.Integer(
         string='Target Canvas Size (px)', default=1920,
-        help='Final image dimension in pixels (square). 1600 gives crisp PDP zoom while staying under Odoo 1920 max.',
+        help='Final image dimension in pixels (square). 1920 matches Odoo\'s image_1920 ceiling '
+             'so all auto-derived thumbnails (1024/512/256/128) are at maximum sharpness.',
         config_parameter='ai_product_image_enrichment.aipie_target_canvas_size',
     )
     aipie_padding_percent = fields.Integer(
@@ -117,32 +118,42 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='ai_product_image_enrichment.aipie_padding_percent',
     )
     aipie_bg_color = fields.Char(
-        string='Background Color', default='#FFFFFF',
+        string='Fallback Background Color', default='#FFFFFF',
+        help='Used only if BG removal fails and the image must be flattened onto an opaque canvas. '
+             'The normal main-image output is always a transparent PNG; this color is never visible there.',
         config_parameter='ai_product_image_enrichment.aipie_bg_color',
     )
     aipie_jpeg_quality = fields.Integer(
         string='JPEG Quality', default=92,
+        help='JPEG quality for the legacy / gallery code path. Main images are always PNG.',
         config_parameter='ai_product_image_enrichment.aipie_jpeg_quality',
     )
     aipie_output_format = fields.Selection([
-        ('jpeg', 'JPEG (recommended for white-bg product shots)'),
-        ('png', 'PNG'),
+        ('jpeg', 'JPEG (smaller, no transparency)'),
+        ('png', 'PNG (supports transparency)'),
         ('auto', 'Auto'),
-    ], string='Output Format', default='jpeg',
+    ], string='Fallback Output Format', default='jpeg',
+       help='Output format for non-main / fallback paths. Main images are always PNG with alpha.',
        config_parameter='ai_product_image_enrichment.aipie_output_format')
     aipie_white_threshold = fields.Integer(
-        string='White Threshold (0-255)', default=245,
-        help='Pixels with R, G, B all >= this value count as "white" for background detection.',
+        string='Studio-source White Threshold (0-255)', default=245,
+        help='Pixels with R, G, B all >= this value count as "white" when detecting whether a '
+             'source image was shot on a clean studio background. This is a SOURCE-detection '
+             'tuning knob — it does not affect the final output.',
         config_parameter='ai_product_image_enrichment.aipie_white_threshold',
     )
     aipie_white_bg_min_percent = fields.Integer(
-        string='White-BG Border Min %', default=85,
-        help='If at least this % of border pixels are "white", image is considered to already have a white background and rembg is skipped.',
+        string='Studio-source Border Min %', default=85,
+        help='If at least this % of a source image\'s border pixels are "white" by the threshold above, '
+             'the source is classified as a studio shot. Studio-classified sources still go through BG '
+             'removal — they just produce the cleanest transparent output.',
         config_parameter='ai_product_image_enrichment.aipie_white_bg_min_percent',
     )
     aipie_force_normalize_existing = fields.Boolean(
-        string='Always Normalize (even white-BG images)', default=True,
-        help='Trim/center/pad even on already-white-BG images. This is what fixes inconsistent framing across the existing catalog.',
+        string='Always Re-Normalize', default=True,
+        help='Trim, center, and pad every product to the uniform canvas, regardless of source state. '
+             'This is what fixes inconsistent framing across an existing catalog. Required for visual '
+             'shop-grid uniformity.',
         config_parameter='ai_product_image_enrichment.aipie_force_normalize_existing',
     )
 

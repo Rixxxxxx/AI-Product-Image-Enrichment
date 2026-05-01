@@ -41,24 +41,24 @@
                     </setting>
 
                     <h2>Normalization (visual uniformity)</h2>
-                    <setting string="Target Canvas Size (px)" help="1600 gives crisp PDP zoom while staying under Odoo's 1920 max.">
+                    <setting string="Target Canvas Size (px)" help="Final image dimension (square). 1920 matches Odoo's image_1920 ceiling for maximum sharpness in auto-derived thumbnails.">
                         <field name="aipie_target_canvas_size"/>
                     </setting>
                     <setting string="Padding (%)" help="Whitespace around the product. THIS is what makes the shop grid look uniform.">
                         <field name="aipie_padding_percent"/>
                     </setting>
-                    <setting string="Background Color">
+                    <setting string="Fallback Background Color" help="Used only if BG removal fails. Main image output is always transparent PNG; this color is never visible there.">
                         <field name="aipie_bg_color"/>
                     </setting>
-                    <setting string="Output Format / Quality">
+                    <setting string="Fallback Output Format / Quality" help="Main images are always PNG with alpha. These settings only apply to the fallback / gallery code path.">
                         <field name="aipie_output_format"/>
                         <field name="aipie_jpeg_quality"/>
                     </setting>
-                    <setting string="White-BG Detection">
+                    <setting string="Studio-source Detection" help="Tunes how the analyzer classifies a source image as a studio shot vs a complex shot. Source-side only — does not affect output.">
                         <field name="aipie_white_threshold"/>
                         <field name="aipie_white_bg_min_percent"/>
                     </setting>
-                    <setting string="Always Re-Normalize" help="Trim/center/pad even on already-white-BG images. Required for visual uniformity.">
+                    <setting string="Always Re-Normalize" help="Trim, center, and pad every product to the uniform canvas, regardless of source state. Required for visual shop-grid uniformity.">
                         <field name="aipie_force_normalize_existing"/>
                     </setting>
                     <setting>
