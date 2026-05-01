@@ -14,8 +14,9 @@
                 </group>
                 <group string="Estimate">
                     <field name="estimated_count" readonly="1"/>
+                    <field name="estimated_already_transparent" readonly="1"/>
                     <field name="estimated_white_bg" readonly="1"/>
-                    <field name="estimated_rembg" readonly="1"/>
+                    <field name="estimated_complex" readonly="1"/>
                 </group>
                 <footer>
                     <button name="action_run" type="object" string="Run" class="btn-primary"/>

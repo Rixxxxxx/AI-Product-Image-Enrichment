@@ -26,15 +26,26 @@ class NormalizeOnlyWizard(models.TransientModel):
     )
 
     estimated_count = fields.Integer(compute='_compute_breakdown', readonly=True)
+    estimated_already_transparent = fields.Integer(
+        compute='_compute_breakdown', readonly=True,
+        string='Already transparent (skip BG removal)',
+        help='Source images that already have a transparent background — no BG removal needed. '
+             'Trim/center/pad still applies for uniform sizing.',
+    )
     estimated_white_bg = fields.Integer(
         compute='_compute_breakdown', readonly=True,
-        string='Already White-BG (skip rembg)',
+        string='Studio shots (clean BG removal)',
+        help='Source images on a clean white background. BG removal will produce '
+             'transparent results with no halo artifacts.',
     )
-    estimated_rembg = fields.Integer(
+    estimated_complex = fields.Integer(
         compute='_compute_breakdown', readonly=True,
-        string='Need rembg',
+        string='Complex sources (BG removal applied)',
+        help='Source images with non-white / busy backgrounds. BG removal handles them, '
+             'but edges may have minor artifacts depending on source quality.',
     )
-    breakdown_sample_size = fields.Integer(default=20, help='Sample size for the white-BG estimate.')
+    breakdown_sample_size = fields.Integer(default=20,
+        help='Sample size for the source-quality estimate. Larger = more accurate, slower to compute.')
 
     @api.depends('selection_mode', 'category_ids', 'force_renormalize', 'breakdown_sample_size')
     def _compute_breakdown(self):
@@ -42,9 +53,8 @@ class NormalizeOnlyWizard(models.TransientModel):
             products = rec._resolve_products()
             rec.estimated_count = len(products)
 
-            # Sample-based estimate of how many images already have a clean white BG.
             sample = products[:max(1, rec.breakdown_sample_size)]
-            white = 0
+            counts = {'transparent': 0, 'white': 0, 'complex': 0}
             from ..services.background_analyzer import BackgroundAnalyzer
             config = self.env['res.config.settings'].sudo().get_aipie_config()
             analyzer = BackgroundAnalyzer(
@@ -56,14 +66,16 @@ class NormalizeOnlyWizard(models.TransientModel):
                     continue
                 try:
                     raw = base64.b64decode(p.image_1920)
-                    has_white, _pct, _info = analyzer.analyze(raw)
-                    if has_white:
-                        white += 1
+                    _has_white, _pct, info = analyzer.analyze(raw)
+                    state = info.get('source_state', 'complex')
+                    counts[state] = counts.get(state, 0) + 1
                 except Exception:
                     pass
-            ratio = white / max(1, len(sample))
-            rec.estimated_white_bg = int(rec.estimated_count * ratio)
-            rec.estimated_rembg = rec.estimated_count - rec.estimated_white_bg
+            sample_n = max(1, sum(counts.values()))
+            total = rec.estimated_count
+            rec.estimated_already_transparent = int(total * counts['transparent'] / sample_n)
+            rec.estimated_white_bg = int(total * counts['white'] / sample_n)
+            rec.estimated_complex = total - rec.estimated_already_transparent - rec.estimated_white_bg
 
     def _resolve_products(self):
         Product = self.env['product.template']

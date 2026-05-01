@@ -132,26 +132,30 @@ def normalize_existing_main_image(product, config, env):
 
     analyzer = _get_bg_analyzer(config)
     has_white, white_pct, info = analyzer.analyze(raw)
+    source_state = info.get('source_state', 'complex')
 
-    # Vision disambiguation for borderline numpy results
-    if not has_white and _ambiguous_white_bg(white_pct, 70, 90) and config.get('anthropic_api_key'):
+    # Vision disambiguation for borderline numpy results (only meaningful for opaque sources)
+    if source_state == 'complex' and _ambiguous_white_bg(white_pct, 70, 90) and config.get('anthropic_api_key'):
         from .ai_image_classifier import AIImageClassifier
         cls = AIImageClassifier(config['anthropic_api_key'], config['anthropic_model'], env=env)
         if cls.vision_is_studio_shot(raw):
+            source_state = 'white'
             has_white = True
 
     _backup_main(product, config)
 
     normalizer = _get_normalizer()
 
-    # Main images are ALWAYS transparent PNG. Even if the source already has a white
-    # background, we run BG removal to get a clean alpha channel (white-fill fallback
-    # leaves halo artifacts on antialiased edges).
-    try:
-        transparent = _get_bg_dispatcher(config).remove(raw)
-    except Exception as e:
-        _logger.warning('BG removal failed for product %s: %s — falling back to white-to-alpha approx', product.id, e)
-        transparent = raw  # normalizer will synthesize alpha from white pixels
+    # If source is already transparent: skip BG removal entirely; just normalize.
+    # Otherwise: run BG removal to produce a transparent PNG, then normalize.
+    if source_state == 'transparent':
+        transparent = raw
+    else:
+        try:
+            transparent = _get_bg_dispatcher(config).remove(raw)
+        except Exception as e:
+            _logger.warning('BG removal failed for product %s: %s — falling back to white-to-alpha approx', product.id, e)
+            transparent = raw  # normalizer will synthesize alpha from white pixels
 
     normalized = normalizer.normalize(
         transparent,
@@ -169,7 +173,11 @@ def normalize_existing_main_image(product, config, env):
     if product.aipie_enrichment_state == 'not_enriched':
         product.aipie_enrichment_state = 'enriched'
 
-    return {'was_white_bg': has_white, 'white_percent': white_pct}
+    return {
+        'was_white_bg': has_white,
+        'white_percent': white_pct,
+        'source_state': source_state,
+    }
 
 
 # ---------- discovery + apply ----------
