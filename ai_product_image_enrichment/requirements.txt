@@ -1,4 +1,4 @@
-# Python dependencies for laudie_image_ai.
+# Python dependencies for ai_product_image_enrichment.
 # Mirrored at the addon level for managed Odoo hosts that look here
 # rather than at the repo root.
 requests>=2.28

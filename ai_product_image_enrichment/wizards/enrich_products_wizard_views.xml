@@ -10,11 +10,12 @@
                     <field name="category_ids" widget="many2many_tags"
                            invisible="selection_mode != 'category'"/>
                     <field name="pipeline_steps"/>
-                    <field name="dry_run"/>
+                    <field name="discover_main_image"/>
                 </group>
-                <group string="Estimate">
+                <group string="Estimate &amp; Cost Cap">
                     <field name="estimated_count" readonly="1"/>
-                    <field name="estimated_cost" readonly="1" widget="monetary"/>
+                    <field name="estimated_cost_range" readonly="1"/>
+                    <field name="cost_cap_usd" widget="monetary"/>
                 </group>
                 <footer>
                     <button name="action_run" type="object" string="Run" class="btn-primary"/>

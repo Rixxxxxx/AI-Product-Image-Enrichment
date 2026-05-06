@@ -82,7 +82,7 @@ _logger = logging.getLogger(__name__)
 class PageFetcher:
 
     def __init__(self, user_agent: str, request_delay_seconds: float = 2.0,
-                 timeout: int = 20):
+                 timeout: int = 10):
         self.user_agent = user_agent
         self.delay = float(request_delay_seconds or 2.0)
         self.timeout = timeout
@@ -100,13 +100,14 @@ class PageFetcher:
         return rp.can_fetch(self.user_agent, url)
 
     def fetch(self, url: str):
-        """Fetch HTML. Returns (html_text, soup) or (None, None) if blocked/failed."""
+        """Fetch HTML. Returns (html_text, soup, reason) where reason is None on success
+        or a short human string explaining the failure ('ssrf-guard', 'robots-disallow',
+        'http-403', 'non-html', 'anti-bot', 'connection-error', etc.).
+        """
         if not is_safe_external_url(url):
-            _logger.info('Refusing fetch of unsafe URL (SSRF guard): %s', url)
-            return None, None
+            return None, None, 'unsafe-url (SSRF guard)'
         if not self.can_fetch(url):
-            _logger.info('robots.txt forbids %s', url)
-            return None, None
+            return None, None, 'robots.txt disallows'
         self._respect_delay(url)
         try:
             resp = requests.get(
@@ -116,25 +117,22 @@ class PageFetcher:
                 allow_redirects=True,
             )
         except requests.RequestException as e:
-            _logger.warning('Fetch failed %s: %s', url, e)
-            return None, None
+            return None, None, f'connection error: {e.__class__.__name__}'
 
         if resp.status_code != 200 or not resp.text:
-            return None, None
+            return None, None, f'HTTP {resp.status_code}'
 
         ct = (resp.headers.get('Content-Type') or '').lower()
         if 'html' not in ct:
-            return None, None
+            return None, None, f'non-html content-type ({ct or "unknown"})'
 
         if self._looks_like_anti_bot(resp.text):
-            _logger.info('Anti-bot challenge detected on %s — skipping', url)
-            return None, None
+            return None, None, 'anti-bot challenge detected (Cloudflare/Akamai/Incapsula)'
 
         soup = BeautifulSoup(resp.text, 'lxml')
-        # Strip noise to reduce tokens for Claude
         for tag in soup(['script', 'style', 'noscript', 'svg', 'iframe']):
             tag.decompose()
-        return resp.text, soup
+        return resp.text, soup, None
 
     def download_image(self, url: str, max_bytes: int = 10 * 1024 * 1024):
         """Download an image (binary). Returns (bytes, mimetype) or (None, None)."""

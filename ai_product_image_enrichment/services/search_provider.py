@@ -33,7 +33,7 @@ class SearchResult:
 
 class SearchProvider:
 
-    def __init__(self, provider: str, api_key: str = '', user_agent: str = 'ProductImageBot/1.0'):
+    def __init__(self, provider: str, api_key: str = '', user_agent: str = 'LaudieImageBot/1.0'):
         self.provider = provider
         self.api_key = api_key or ''
         self.user_agent = user_agent
@@ -42,15 +42,19 @@ class SearchProvider:
 
     def search_product_page(self, product) -> list:
         """Build query and return up to ~10 candidate page URLs, manufacturer-domain-preferred."""
+        from .enrichment_pipeline import _extract_likely_models
+
         manufacturer = (product._effective_manufacturer() or '').strip()
-        sku = (product.aipie_manufacturer_sku or product.default_code or '').strip()
+        skus = _extract_likely_models(product)
         name = (product.name or '').strip()
 
-        if not (manufacturer or sku or name):
+        if not (manufacturer or skus or name):
             return []
 
-        # Most discriminating bits first
-        parts = [manufacturer, sku, name]
+        # Manufacturer first, then all candidate SKUs (auto-extracted from name +
+        # any explicit override + default_code), then product name. Most search
+        # engines tolerate extra keywords gracefully.
+        parts = [manufacturer] + skus + [name]
         query = ' '.join(p for p in parts if p)[:200]
 
         try:
@@ -84,7 +88,7 @@ class SearchProvider:
                 'Accept': 'application/json',
                 'User-Agent': self.user_agent,
             },
-            timeout=15,
+            timeout=8,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -104,7 +108,7 @@ class SearchProvider:
         resp = requests.get(
             'https://serpapi.com/search.json',
             params={'q': query, 'api_key': self.api_key, 'num': 10, 'engine': 'google'},
-            timeout=15,
+            timeout=8,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -127,7 +131,7 @@ class SearchProvider:
         resp = requests.get(
             'https://www.googleapis.com/customsearch/v1',
             params={'q': query, 'key': key, 'cx': cx, 'num': 10},
-            timeout=15,
+            timeout=8,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -148,7 +152,7 @@ class SearchProvider:
                 'https://html.duckduckgo.com/html/',
                 data={'q': query},
                 headers={'User-Agent': self.user_agent},
-                timeout=15,
+                timeout=8,
             )
             if resp.status_code != 200:
                 return []

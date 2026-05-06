@@ -28,7 +28,7 @@ MAX_URLS_PER_INDEX = 50000
 
 class SitemapProvider:
 
-    def __init__(self, user_agent: str, timeout: int = 20):
+    def __init__(self, user_agent: str, timeout: int = 8):
         self.user_agent = user_agent
         self.timeout = timeout
         self._cache = {}  # host -> list[str] of URLs
@@ -81,7 +81,7 @@ class SitemapProvider:
         # Hard guard against malicious/circular sitemap indexes
         if visited is None:
             visited = set()
-        if depth > 5 or url in visited or len(visited) > 100:
+        if depth > 2 or url in visited or len(visited) > 25:
             return []
         visited.add(url)
 

@@ -24,18 +24,53 @@ class EnrichProductsWizard(models.TransientModel):
         ('full', 'Full Pipeline'),
     ], default='discover_only', required=True)
 
-    dry_run = fields.Boolean(default=False)
-    estimated_cost = fields.Float(compute='_compute_estimated_cost', readonly=True)
+    discover_main_image = fields.Boolean(
+        default=False, string='Also discover main image',
+        help='Default OFF: discovery finds gallery images only (angles, details, in-use, '
+             'lifestyle, accessory). Use the Normalize Main Images wizard separately for '
+             'existing main images. Turn ON when you want the AI to also propose a main '
+             'image candidate — useful for products that do not yet have one. The found '
+             'image will be background-removed and normalized regardless of source quality.',
+    )
+    estimated_cost_low = fields.Float(compute='_compute_estimated_cost', readonly=True,
+        string='Estimated Cost (best case)',
+        help='Best case: ~$0.01/product when the first candidate page is the right one '
+             '(typical for products with a clean manufacturer SKU and live brand sitemap).')
+    estimated_cost_high = fields.Float(compute='_compute_estimated_cost', readonly=True,
+        string='Estimated Cost (worst case)',
+        help='Worst case: ~$0.05/product if all 5 candidate pages need to be classified '
+             'before a match is found (or none match).')
+    estimated_cost_range = fields.Char(compute='_compute_estimated_cost', readonly=True,
+        string='Estimated Cost',
+        help='Range based on Claude Haiku classification calls. Cost scales with '
+             'pages-classified per product, NOT images found. One call may return many images.')
     estimated_count = fields.Integer(compute='_compute_estimated_cost', readonly=True)
+    cost_cap_usd = fields.Float(
+        string='Cost Cap (USD)', compute='_compute_estimated_cost',
+        readonly=False, store=False,
+        help='Hard pause threshold for THIS job. The cron pauses the job once this '
+             'job\'s total Anthropic spend reaches this cap. Pre-filled to 1.5× the '
+             'worst-case estimate as a safety margin — adjust if you expect higher cost.')
 
     @api.depends('selection_mode', 'category_ids', 'product_ids', 'pipeline_steps')
     def _compute_estimated_cost(self):
         for rec in self:
             products = rec._resolve_products()
-            rec.estimated_count = len(products)
-            # ~$0.01/product for discovery with Haiku, $0 for normalize_only
-            per = 0.0 if rec.pipeline_steps == 'normalize_only' else 0.01
-            rec.estimated_cost = per * len(products)
+            n = len(products)
+            rec.estimated_count = n
+            if rec.pipeline_steps == 'normalize_only':
+                rec.estimated_cost_low = 0.0
+                rec.estimated_cost_high = 0.0
+                rec.estimated_cost_range = '$0.00 (no AI calls)'
+            else:
+                # ~$0.01 per Claude Haiku classification call. Best case: 1 call per
+                # product (sitemap hit). Worst case: 5 (page_urls cap).
+                rec.estimated_cost_low = 0.01 * n
+                rec.estimated_cost_high = 0.05 * n
+                rec.estimated_cost_range = '$%.2f – $%.2f' % (rec.estimated_cost_low, rec.estimated_cost_high)
+            # Default cap = 1.5× worst case, with a $1 floor for tiny jobs.
+            # Operator can override before clicking Run.
+            rec.cost_cap_usd = max(1.0, round(rec.estimated_cost_high * 1.5, 2))
 
     def _resolve_products(self):
         Product = self.env['product.template']
@@ -60,25 +95,20 @@ class EnrichProductsWizard(models.TransientModel):
         products = self._resolve_products()
         if not products:
             raise UserError(_('No products matched selection.'))
-        if self.dry_run:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Dry run'),
-                    'message': _('%d products would be enriched (~$%.2f).')
-                               % (len(products), self.estimated_cost),
-                    'type': 'info',
-                },
-            }
         job = self.env['aipie.enrichment.job'].create({
             'name': _('Wizard %s') % fields.Datetime.now(),
             'pipeline_steps': self.pipeline_steps,
             'product_ids': [(6, 0, products.ids)],
             'pending_product_ids': [(6, 0, products.ids)],
             'state': 'queued',
-            'estimated_cost_usd': self.estimated_cost,
+            'estimated_cost_usd': self.estimated_cost_high,
+            'cost_cap_usd': self.cost_cap_usd,
+            'discover_main_image': self.discover_main_image,
         })
+        # Mark products as queued so the operator doesn't see stale 'no_results'
+        # / 'enriched' / 'error' state from a previous run while waiting for cron.
+        if self.pipeline_steps != 'normalize_only':
+            products.write({'aipie_enrichment_state': 'queued'})
         return {
             'type': 'ir.actions.act_window',
             'res_model': 'aipie.enrichment.job',

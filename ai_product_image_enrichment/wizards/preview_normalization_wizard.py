@@ -28,13 +28,13 @@ class PreviewNormalizationWizard(models.TransientModel):
         ('jpeg', 'JPEG'), ('png', 'PNG'),
     ], default='jpeg')
     jpeg_quality = fields.Integer(default=92)
-    white_threshold = fields.Integer(default=245)
-    white_bg_min_percent = fields.Integer(default=85)
+    white_threshold = fields.Integer(default=245, string='Studio Threshold (0-255)')
+    white_bg_min_percent = fields.Integer(default=85, string='Studio Border Min %')
 
-    detected_white_bg = fields.Boolean(readonly=True)
-    detected_white_pct = fields.Float(readonly=True, string='Border White %')
-    detected_top_corner_pct = fields.Float(readonly=True, string='Top Corner White %')
-    detected_bottom_corner_pct = fields.Float(readonly=True, string='Bottom Corner White %')
+    detected_white_bg = fields.Boolean(readonly=True, string='Source is Studio-Quality')
+    detected_white_pct = fields.Float(readonly=True, string='Border Cleanness %')
+    detected_top_corner_pct = fields.Float(readonly=True, string='Top Corner Cleanness %')
+    detected_bottom_corner_pct = fields.Float(readonly=True, string='Bottom Corner Cleanness %')
 
     normalized_preview = fields.Binary(readonly=True, string='Normalized Output (transparent PNG)')
     transparency_check_preview = fields.Binary(

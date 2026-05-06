@@ -12,17 +12,23 @@
                             <field name="aipie_effective_manufacturer" readonly="1"/>
                             <field name="aipie_manufacturer"
                                    placeholder="Leave empty — auto from Brand attribute"/>
-                            <field name="aipie_manufacturer_sku"/>
+                            <field name="aipie_effective_model" readonly="1"/>
+                            <field name="aipie_manufacturer_model"
+                                   placeholder="Leave empty — auto-extracted from product name"/>
                         </group>
                         <group string="Status">
+                            <field name="aipie_enrichment_outcome" widget="badge"
+                                   decoration-info="aipie_enrichment_outcome == 'pending'"
+                                   decoration-success="aipie_enrichment_outcome == 'success'"
+                                   decoration-warning="aipie_enrichment_outcome == 'no_results'"
+                                   decoration-danger="aipie_enrichment_outcome == 'failure'"
+                                   decoration-muted="aipie_enrichment_outcome == 'skipped'"/>
                             <field name="aipie_enrichment_state"/>
                             <field name="aipie_enrichment_last_run"/>
                             <field name="aipie_main_image_normalized"/>
                             <field name="aipie_main_image_already_white_bg"/>
                             <field name="aipie_image_count"/>
                             <field name="aipie_pending_candidate_count"/>
-                            <field name="aipie_gallery_mode"/>
-                            <field name="aipie_gallery_enabled" readonly="1"/>
                             <field name="aipie_normalization_signature" readonly="1" groups="base.group_no_one"/>
                         </group>
                     </group>

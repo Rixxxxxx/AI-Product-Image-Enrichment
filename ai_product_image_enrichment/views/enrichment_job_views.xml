@@ -10,6 +10,9 @@
                             invisible="state in ('queued','running','done','cancelled')"/>
                     <button name="action_pause" type="object" string="Pause"
                             invisible="state not in ('queued','running')"/>
+                    <button name="action_finish_now" type="object" string="Finish Now (Keep Candidates)"
+                            invisible="state not in ('queued','running','paused')"
+                            help="Stop processing the remaining products but keep all candidates already collected. Use when a job is hung or you've got enough to work with."/>
                     <button name="action_cancel" type="object" string="Cancel"
                             invisible="state in ('done','cancelled','failed')"/>
                     <button name="action_open_candidates" type="object" string="View Candidates"/>
@@ -20,13 +23,18 @@
                         <group>
                             <field name="name"/>
                             <field name="pipeline_steps"/>
-                            <field name="dry_run"/>
+                            <field name="discover_main_image"/>
+                            <field name="cost_cap_usd"/>
+                            <field name="max_consecutive_failures"/>
+                            <field name="consecutive_failure_count" readonly="1"/>
+                            <field name="pause_reason" readonly="1" invisible="not pause_reason"/>
                         </group>
                         <group>
                             <field name="total_count"/>
                             <field name="processed_count"/>
-                            <field name="success_count"/>
-                            <field name="failure_count"/>
+                            <field name="success_count" string="Found Candidates"/>
+                            <field name="no_result_count" string="No Results"/>
+                            <field name="failure_count" string="Errors"/>
                             <field name="images_with_white_bg_count"/>
                             <field name="images_required_rembg_count"/>
                             <field name="actual_cost_usd" widget="monetary"/>

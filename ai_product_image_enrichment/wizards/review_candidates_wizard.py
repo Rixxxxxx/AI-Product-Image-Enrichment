@@ -14,6 +14,8 @@ class ReviewCandidatesWizard(models.TransientModel):
     ], default='main')
 
     def action_approve_high_confidence(self):
+        """Approve = apply directly (no intermediate 'approved-awaiting-apply'
+        state any more)."""
         self.ensure_one()
         domain = [('state', '=', 'pending'), ('confidence', '>=', self.confidence_threshold)]
         if self.job_id:
@@ -23,30 +25,13 @@ class ReviewCandidatesWizard(models.TransientModel):
         elif self.role_filter == 'gallery':
             domain.append(('role', '!=', 'main'))
         cands = self.env['aipie.product.image.candidate'].search(domain)
-        cands.write({'state': 'approved'})
+        cands.action_approve()
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('Approved'),
+                'title': _('Approved & Applied'),
                 'message': _('%d candidates approved.') % len(cands),
-                'type': 'success',
-            },
-        }
-
-    def action_apply_approved(self):
-        self.ensure_one()
-        domain = [('state', '=', 'approved')]
-        if self.job_id:
-            domain.append(('job_id', '=', self.job_id.id))
-        cands = self.env['aipie.product.image.candidate'].search(domain)
-        cands.action_apply_to_product()
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Applied'),
-                'message': _('%d candidates applied.') % len(cands),
                 'type': 'success',
             },
         }

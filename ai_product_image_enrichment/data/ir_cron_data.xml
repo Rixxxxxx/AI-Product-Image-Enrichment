@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="cron_ai_product_image_enrichment_run" model="ir.cron">
-        <field name="name">AI Image: Process Enrichment Jobs</field>
+        <field name="name">AI Image Enrichment: Process Enrichment Jobs</field>
         <field name="model_id" ref="model_aipie_enrichment_job"/>
         <field name="state">code</field>
         <field name="code">model._cron_run_jobs()</field>
@@ -11,7 +11,7 @@
     </record>
 
     <record id="cron_ai_product_image_enrichment_budget" model="ir.cron">
-        <field name="name">AI Image: Daily Budget Check</field>
+        <field name="name">AI Image Enrichment: Daily Budget Check</field>
         <field name="model_id" ref="model_aipie_enrichment_job"/>
         <field name="state">code</field>
         <field name="code">model._check_budget_and_pause()</field>

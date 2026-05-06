@@ -50,12 +50,18 @@ class ProductImageCandidate(models.Model):
 
     preview_normalized_image = fields.Binary(attachment=True, string='Normalized Preview')
 
+    # Surface the product's current main image directly on the candidate so
+    # the operator can sanity-check "is this candidate even the right product"
+    # at a glance, without bouncing to the product form.
+    product_current_main_image = fields.Image(
+        related='product_id.image_1920', readonly=True, string='Product Current Main',
+    )
+
     state = fields.Selection([
         ('pending', 'Pending Review'),
-        ('approved', 'Approved (Awaiting Apply)'),
-        ('applied', 'Applied'),
+        ('applied', 'Approved'),
         ('rejected', 'Rejected'),
-        ('failed', 'Download/Process Failed'),
+        ('failed', 'Failed'),
     ], default='pending', tracking=True)
 
     rejection_reason = fields.Char()
@@ -68,16 +74,9 @@ class ProductImageCandidate(models.Model):
     # ---------- Actions ----------
 
     def action_approve(self):
-        for rec in self:
-            rec.state = 'approved'
-        return True
-
-    def action_reject(self):
-        for rec in self:
-            rec.state = 'rejected'
-        return True
-
-    def action_apply_to_product(self):
+        """Approve = apply. Approving an image always means using it on the
+        product; the previous separate "Approved (Awaiting Apply)" state was
+        redundant friction."""
         from ..services.enrichment_pipeline import apply_candidate_to_product
         config = self.env['res.config.settings'].sudo().get_aipie_config()
         for rec in self:
@@ -88,6 +87,54 @@ class ProductImageCandidate(models.Model):
                 rec.state = 'failed'
                 rec.rejection_reason = str(e)[:255]
         return True
+
+    # Kept as an alias for any external triggers; the new canonical action is
+    # action_approve.
+    def action_apply_to_product(self):
+        return self.action_approve()
+
+    def action_reject(self):
+        for rec in self:
+            rec.state = 'rejected'
+        return True
+
+    def action_set_as_main(self):
+        """Promote this candidate to role='main' for its product. Any existing
+        candidate on the same product currently flagged 'main' is demoted to
+        'angle' so there's exactly one main per product."""
+        for rec in self:
+            other_mains = self.search([
+                ('product_id', '=', rec.product_id.id),
+                ('id', '!=', rec.id),
+                ('role', '=', 'main'),
+            ])
+            if other_mains:
+                other_mains.write({'role': 'angle'})
+            rec.role = 'main'
+        return True
+
+    def action_approve_all_for_product(self):
+        """Bulk: approve all PENDING candidates for the same product(s) as the
+        current record(s). Useful when the operator wants to take everything
+        the AI found without clicking each card."""
+        product_ids = self.mapped('product_id').ids
+        if not product_ids:
+            return True
+        siblings = self.search([
+            ('product_id', 'in', product_ids),
+            ('state', '=', 'pending'),
+        ])
+        return siblings.action_approve()
+
+    def action_reject_all_for_product(self):
+        product_ids = self.mapped('product_id').ids
+        if not product_ids:
+            return True
+        siblings = self.search([
+            ('product_id', 'in', product_ids),
+            ('state', '=', 'pending'),
+        ])
+        return siblings.action_reject()
 
     def action_regenerate_preview(self):
         from ..services.image_normalizer import ImageNormalizer

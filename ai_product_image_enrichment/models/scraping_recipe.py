@@ -144,7 +144,7 @@ class ScrapingRecipe(models.Model):
         Candidate = env['aipie.product.image.candidate']
         cands = Candidate.search([
             ('source_page_url', 'ilike', self.domain),
-            ('state', 'in', ('approved', 'applied')),
+            ('state', '=', 'applied'),
         ], limit=20, order='create_date desc')
 
         if len(cands) < DEFAULT_BUILD_THRESHOLD:
@@ -184,11 +184,19 @@ class ScrapingRecipe(models.Model):
         )
 
         classifier = classifier_factory()
-        # Re-uses the SDK seam — directly call _call_claude with our prompt
         try:
             recipe = classifier._call_claude(prompt, product=None)  # type: ignore[attr-defined]
         except Exception as e:
-            _logger.warning('Recipe build call failed for %s: %s', self.domain, e)
+            # CRITICAL: deactivate the recipe so we don't keep retrying the build
+            # on every successful enrichment (was a $$$ leak). Operator manually
+            # reactivates from the Scraping Recipes view when ready.
+            _logger.warning('Recipe build call failed for %s: %s — deactivating', self.domain, e)
+            self.write({
+                'active': False,
+                'last_failure': fields.Datetime.now(),
+                'consecutive_failures': self.consecutive_failures + 1,
+                'notes': (self.notes or '') + f'\n[{fields.Datetime.now()}] Build failed: {e}',
+            })
             return
 
         self.write({

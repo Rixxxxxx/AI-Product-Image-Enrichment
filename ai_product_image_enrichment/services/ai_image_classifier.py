@@ -20,7 +20,12 @@ from urllib.parse import urljoin
 _logger = logging.getLogger(__name__)
 
 
-SYSTEM_PROMPT = """You are an expert at identifying product images on manufacturer e-commerce pages.
+SYSTEM_PROMPT_GALLERY_ONLY = """You are an expert at identifying GALLERY product images on manufacturer e-commerce pages.
+
+IMPORTANT SCOPE: You are NOT looking for a main / hero / PDP shot. The operator
+already has a main image for every product. Your job is to find SUPPLEMENTARY
+gallery images that go alongside the existing main on the product detail page.
+Never assign role=main to any image.
 
 You will be given:
   - Product context: name, SKU, manufacturer, optional category
@@ -30,24 +35,52 @@ You will be given:
 Your tasks:
 1. Decide if this page actually represents the given product (page_is_correct_product).
    Use SKU and manufacturer name as primary evidence. Be conservative — if uncertain, say false.
-2. For each image, classify its ROLE:
-   - main: Hero/PDP shot. CRITICAL: only assign role=main if the image clearly has
-     a CLEAN WHITE OR STUDIO BACKGROUND. URL/alt patterns that strongly suggest a
-     studio shot: _white, _studio, _main, _primary, _pdp, _hero, _front, _on-white,
-     _silo, _packshot. If the only candidate "main" image looks like a lifestyle or
-     in-use shot (operator, warehouse floor, busy backdrop), DO NOT mark it as main —
-     leave main empty. Better to skip than to apply a non-studio main.
-   - angle: Alternate viewpoint of the same product, white/studio background
-   - detail: Close-up of a control, label, or feature (background can be anything)
-   - in_use: Product being used in a real environment (operator, floor, etc.)
-   - lifestyle: Marketing/lifestyle imagery emphasizing context over product
+2. For each image, classify its ROLE (one of):
+   - angle: Alternate viewpoint of the same product (back, side, top, three-quarter)
+   - detail: Close-up of a control, label, attachment point, or feature
+   - in_use: Product being used in a real environment (operator, floor, room)
+   - lifestyle: Marketing imagery emphasizing context over product
    - accessory: A bundled accessory or attachment, not the main product
    - uncertain: Cannot tell — DO NOT include in `images`, list in `rejected` instead
 3. REJECT logos, navigation icons, banners, hero marketing tiles, related-product
    thumbnails, review/rating widgets, social-media icons, payment-method icons.
+4. If you see what is clearly the product's primary studio shot (typically the first
+   large hero image), classify it as `angle` — NOT main. We don't replace the
+   operator's existing main image.
 
-Be conservative: false positives waste budget downloading bad images. A missing
-main image is better than a bad one — the operator will fall back to manual upload.
+Be conservative: false positives waste budget downloading bad images.
+"""
+
+
+SYSTEM_PROMPT_INCLUDE_MAIN = """You are an expert at identifying product images on manufacturer e-commerce pages.
+
+The operator wants you to find BOTH a main image AND supplementary gallery images.
+
+You will be given:
+  - Product context: name, SKU, manufacturer, optional category
+  - A list of <img> tags from a candidate manufacturer product page, each with:
+    src URL, alt text, declared width/height, surrounding-text snippet
+
+Your tasks:
+1. Decide if this page actually represents the given product (page_is_correct_product).
+   Use SKU and manufacturer name as primary evidence. Be conservative — if uncertain, say false.
+2. For each image, classify its ROLE (one of):
+   - main: The primary studio / PDP shot of the product. ANY background is fine
+     (white, grey, transparent, even mild context) — the pipeline will run
+     background removal and normalize it. Pick the one that best shows the
+     product in full, isolated, frontal or three-quarter view.
+   - angle: Alternate viewpoint of the same product
+   - detail: Close-up of a control, label, attachment point, or feature
+   - in_use: Product being used in a real environment (operator, floor, room)
+   - lifestyle: Marketing imagery emphasizing context over product
+   - accessory: A bundled accessory or attachment, not the main product
+   - uncertain: Cannot tell — DO NOT include in `images`, list in `rejected` instead
+3. REJECT logos, navigation icons, banners, hero marketing tiles, related-product
+   thumbnails, review/rating widgets, social-media icons, payment-method icons.
+4. Choose AT MOST ONE main image. If multiple equally-qualified candidates exist,
+   pick the one with the cleanest background and best framing.
+
+Be conservative: false positives waste budget downloading bad images.
 
 Return STRICT JSON only — no prose, no markdown fences:
 {
@@ -64,6 +97,16 @@ Return STRICT JSON only — no prose, no markdown fences:
 
 
 class AIImageClassifierError(Exception):
+    pass
+
+
+class AIServiceUnavailable(Exception):
+    """Anthropic API is unavailable / rejecting calls in a way that retrying won't help.
+
+    Raised on credit-balance-too-low, authentication failure, or sustained
+    rate-limit. The cron catches this, pauses ALL running jobs, and notifies
+    the operator. No more Claude calls happen until the operator re-queues.
+    """
     pass
 
 
@@ -88,11 +131,12 @@ def _sanitize_anthropic_error(e: Exception) -> str:
 
 class AIImageClassifier:
 
-    def __init__(self, api_key: str, model: str, env=None, job=None):
+    def __init__(self, api_key: str, model: str, env=None, job=None, include_main: bool = False):
         self.api_key = api_key
         self.model = model
         self.env = env
         self.job = job
+        self.include_main = include_main
 
     # ---------- public ----------
 
@@ -124,11 +168,17 @@ class AIImageClassifier:
 
     @staticmethod
     def _product_context_block(product):
+        from .enrichment_pipeline import _extract_likely_models
+        skus = _extract_likely_models(product)
+        primary_sku = skus[0] if skus else ''
+        alt_skus = ', '.join(skus[1:]) if len(skus) > 1 else ''
         bits = [
             f'name: {product.name or ""}',
-            f'sku: {product.aipie_manufacturer_sku or product.default_code or ""}',
+            f'sku: {primary_sku}',
             f'manufacturer: {product._effective_manufacturer() or ""}',
         ]
+        if alt_skus:
+            bits.append(f'alternative_models_to_consider: {alt_skus}')
         cat = product.categ_id.name if product.categ_id else ''
         if cat:
             bits.append(f'category: {cat}')
@@ -201,7 +251,79 @@ class AIImageClassifier:
 
     # ---------- API ----------
 
+    # Tool schema forces Claude to return structured JSON instead of free-form
+    # markdown prose. Was the source of every "Claude returned non-JSON" error.
+    _CLASSIFY_TOOL = {
+        'name': 'submit_classification',
+        'description': 'Submit your classification of product images on this page.',
+        'input_schema': {
+            'type': 'object',
+            'properties': {
+                'page_is_correct_product': {
+                    'type': 'boolean',
+                    'description': 'True if this page represents the given product.',
+                },
+                'product_match_confidence': {
+                    'type': 'number',
+                    'description': 'Confidence (0..1) that this page is the right product.',
+                },
+                'match_reasoning': {
+                    'type': 'string',
+                    'description': 'One-sentence reason for the page-match decision.',
+                },
+                'images': {
+                    'type': 'array',
+                    'description': 'Images you classified as product photos worth keeping.',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'url': {'type': 'string'},
+                            'role': {
+                                'type': 'string',
+                                'enum': ['main', 'angle', 'detail', 'in_use', 'lifestyle', 'accessory'],
+                            },
+                            'confidence': {'type': 'number'},
+                            'reasoning': {'type': 'string'},
+                        },
+                        'required': ['url', 'role', 'confidence'],
+                    },
+                },
+                'rejected': {
+                    'type': 'array',
+                    'description': 'Images you explicitly rejected (logos, banners, unrelated).',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'url': {'type': 'string'},
+                            'reason': {'type': 'string'},
+                        },
+                        'required': ['url', 'reason'],
+                    },
+                },
+            },
+            'required': ['page_is_correct_product', 'product_match_confidence', 'images', 'rejected'],
+        },
+    }
+
     def _call_claude(self, user_msg: str, product=None):
+        # HARD KILL-SWITCH: refuse every Claude call once trailing-hour spend
+        # exceeds the configured cap. Independent of jobs, cron, locks. Reads
+        # from aipie_ai_usage_log (which writes via separate cursor and
+        # therefore reflects real spend even if the surrounding txn rolled back).
+        if self.env is not None:
+            try:
+                cap = float(self.env['ir.config_parameter'].sudo().get_param(
+                    'ai_product_image_enrichment.aipie_hourly_ai_cap_usd', '5.0'))
+            except (ValueError, TypeError):
+                cap = 5.0
+            if cap > 0:
+                spent = self.env['aipie.ai.usage.log']._last_hour_cost()
+                if spent >= cap:
+                    raise AIServiceUnavailable(
+                        f'Hourly cap reached: ${spent:.2f} spent in the last 60 min '
+                        f'(cap ${cap:.2f}). Refusing further Claude calls until usage drops.'
+                    )
+
         try:
             import anthropic
         except ImportError as e:
@@ -212,18 +334,40 @@ class AIImageClassifier:
         in_tok = out_tok = 0
         err = None
         try:
+            # Forced tool use guarantees Claude returns a tool_use block whose
+            # `input` field is already a typed dict. No JSON-parsing fragility.
             resp = client.messages.create(
                 model=self.model,
                 max_tokens=4096,
-                system=SYSTEM_PROMPT,
+                system=(SYSTEM_PROMPT_INCLUDE_MAIN if self.include_main else SYSTEM_PROMPT_GALLERY_ONLY),
+                tools=[self._CLASSIFY_TOOL],
+                tool_choice={'type': 'tool', 'name': 'submit_classification'},
                 messages=[{'role': 'user', 'content': user_msg}],
             )
             in_tok = getattr(resp.usage, 'input_tokens', 0) or 0
             out_tok = getattr(resp.usage, 'output_tokens', 0) or 0
+            for block in resp.content:
+                if getattr(block, 'type', None) == 'tool_use' and getattr(block, 'name', '') == 'submit_classification':
+                    return dict(block.input or {})
+            # Fallback: maybe forced tool-use was ignored — try parsing text
             text = ''.join(getattr(b, 'text', '') for b in resp.content)
             return self._parse_json_strict(text)
+        except AIImageClassifierError:
+            # Already a typed error (e.g. from _parse_json_strict). Re-raise
+            # as-is so the original message survives instead of getting
+            # double-wrapped into 'Claude call failed: AIImageClassifierError'.
+            raise
         except Exception as e:
             err = _sanitize_anthropic_error(e)
+            err_l = err.lower()
+            status = getattr(e, 'status_code', None)
+            if (status in (401, 402, 403, 429)
+                    or 'credit balance' in err_l
+                    or 'insufficient' in err_l
+                    or 'authentication' in err_l
+                    or 'invalid_api_key' in err_l
+                    or 'rate_limit' in err_l):
+                raise AIServiceUnavailable(err) from None
             raise AIImageClassifierError(f'Claude call failed: {err}') from None
         finally:
             duration = int((time.time() - t0) * 1000)

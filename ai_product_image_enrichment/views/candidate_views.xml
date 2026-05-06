@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="aipie_candidate_kanban" model="ir.ui.view">
-        <field name="name">aipie.candidate.kanban</field>
+        <field name="name">laudie.candidate.kanban</field>
         <field name="model">aipie.product.image.candidate</field>
         <field name="arch" type="xml">
             <kanban default_group_by="product_id" class="o_kanban_small_column">
@@ -10,11 +10,17 @@
                 <field name="confidence"/>
                 <field name="has_white_background"/>
                 <templates>
-                    <t t-name="kanban-box">
+                    <t t-name="card">
                         <div class="oe_kanban_global_click oe_kanban_card">
-                            <div class="row">
+                            <div class="row" t-if="record.product_current_main_image.raw_value">
+                                <div class="col-12">
+                                    <small class="text-muted">Product currently uses:</small>
+                                    <field name="product_current_main_image" widget="image" options="{'size': [120,120]}"/>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
                                 <div class="col-6">
-                                    <strong>Original</strong>
+                                    <strong>Candidate (Original)</strong>
                                     <field name="image_data" widget="image" options="{'size': [200,200]}"/>
                                 </div>
                                 <div class="col-6">
@@ -29,13 +35,26 @@
                                     Studio-quality source (cleanest output)
                                 </div>
                                 <div><field name="ai_reasoning"/></div>
-                                <div>
-                                    <button name="action_approve" type="object" string="Approve" class="btn-primary btn-sm"/>
-                                    <button name="action_reject" type="object" string="Reject" class="btn-secondary btn-sm"/>
-                                    <button name="action_apply_to_product" type="object" string="Apply" class="btn-success btn-sm"/>
+                                <div class="mt-2">
+                                    <field name="state" widget="badge"
+                                           decoration-success="state == 'applied'"
+                                           decoration-danger="state == 'rejected'"
+                                           decoration-warning="state == 'pending'"
+                                           decoration-muted="state == 'failed'"/>
+                                </div>
+                                <div class="mt-2" invisible="state != 'pending'">
+                                    <button name="action_approve" type="object" string="Approve" class="btn-success btn-sm"/>
+                                    <button name="action_reject" type="object" string="Reject" class="btn-danger btn-sm"/>
+                                    <button name="action_set_as_main" type="object" string="Set as Main"
+                                            class="btn-secondary btn-sm" invisible="role == 'main'"/>
                                     <button name="action_regenerate_preview" type="object" string="Regen Preview" class="btn-link btn-sm"/>
                                 </div>
-                                <div>State: <field name="state"/></div>
+                                <div class="mt-2" invisible="state == 'pending'">
+                                    <button name="action_approve_all_for_product" type="object"
+                                            string="Approve All Pending for Product" class="btn-link btn-sm"/>
+                                    <button name="action_reject_all_for_product" type="object"
+                                            string="Reject All Pending for Product" class="btn-link btn-sm"/>
+                                </div>
                             </div>
                         </div>
                     </t>
@@ -45,7 +64,7 @@
     </record>
 
     <record id="aipie_candidate_list" model="ir.ui.view">
-        <field name="name">aipie.candidate.list</field>
+        <field name="name">laudie.candidate.list</field>
         <field name="model">aipie.product.image.candidate</field>
         <field name="arch" type="xml">
             <list>
@@ -55,25 +74,34 @@
                 <field name="has_white_background"/>
                 <field name="image_width"/>
                 <field name="image_height"/>
-                <field name="state"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'applied'"
+                       decoration-danger="state == 'rejected'"
+                       decoration-warning="state == 'pending'"
+                       decoration-muted="state == 'failed'"/>
             </list>
         </field>
     </record>
 
     <record id="aipie_candidate_form" model="ir.ui.view">
-        <field name="name">aipie.candidate.form</field>
+        <field name="name">laudie.candidate.form</field>
         <field name="model">aipie.product.image.candidate</field>
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_approve" type="object" string="Approve" class="btn-primary"
-                            invisible="state != 'pending'"/>
+                    <button name="action_approve" type="object" string="Approve"
+                            class="btn-success" invisible="state != 'pending'"/>
                     <button name="action_reject" type="object" string="Reject"
-                            invisible="state != 'pending'"/>
-                    <button name="action_apply_to_product" type="object" string="Apply"
-                            invisible="state not in ('pending','approved')"/>
+                            class="btn-danger" invisible="state != 'pending'"/>
+                    <button name="action_set_as_main" type="object" string="Set as Main"
+                            invisible="state != 'pending' or role == 'main'"/>
+                    <button name="action_approve_all_for_product" type="object"
+                            string="Approve All Pending for Product" invisible="state != 'pending'"/>
+                    <button name="action_reject_all_for_product" type="object"
+                            string="Reject All Pending for Product" invisible="state != 'pending'"/>
                     <button name="action_regenerate_preview" type="object" string="Regenerate Preview"/>
-                    <field name="state" widget="statusbar"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="pending,applied,rejected"/>
                 </header>
                 <sheet>
                     <group>
@@ -98,7 +126,11 @@
                         <field name="ai_reasoning" nolabel="1" readonly="1"/>
                     </group>
                     <group>
-                        <group string="Original">
+                        <group string="Product Currently Uses"
+                               invisible="not product_current_main_image">
+                            <field name="product_current_main_image" widget="image" nolabel="1" readonly="1"/>
+                        </group>
+                        <group string="Candidate (Original)">
                             <field name="image_data" widget="image" nolabel="1"/>
                         </group>
                         <group string="Normalized Preview">

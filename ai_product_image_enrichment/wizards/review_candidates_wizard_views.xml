@@ -12,9 +12,7 @@
                 </group>
                 <footer>
                     <button name="action_approve_high_confidence" type="object"
-                            string="Approve High-Confidence" class="btn-primary"/>
-                    <button name="action_apply_approved" type="object"
-                            string="Apply All Approved"/>
+                            string="Approve &amp; Apply High-Confidence" class="btn-primary"/>
                     <button special="cancel" string="Close"/>
                 </footer>
             </form>

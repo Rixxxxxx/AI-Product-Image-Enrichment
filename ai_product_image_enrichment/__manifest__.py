@@ -1,36 +1,26 @@
 {
     'name': 'AI Product Image Enrichment',
     'version': '19.0.1.0.0',
-    'summary': 'Find, background-remove, and uniformly normalize product images across multi-brand catalogs with AI.',
+    'summary': 'AI-driven product image discovery, background handling, and uniform normalization for a clean shop grid.',
     'description': """
 AI Product Image Enrichment
-===========================
+====================================
 
-The complete catalog imagery platform for multi-brand Odoo shops.
+AI-driven, manufacturer-agnostic image enrichment for Odoo 19 product catalogs.
 
-Three things at once, in one module:
+Pipeline:
+  1. Search the open web for the manufacturer's product page (no per-vendor scraping rules).
+  2. Use Claude (Anthropic API) to read the page and classify product images by role.
+  3. Detect source background state; skip background removal entirely when source is already transparent.
+  4. Normalize every main image to a uniform transparent canvas with consistent padding so the
+     shop grid looks visually coherent across hundreds of products.
 
-1. Discovers professional product images by reading manufacturer websites
-   with Claude AI — no per-vendor scraping rules to maintain.
-2. Removes backgrounds and uniformly normalizes every main image so the
-   shop grid looks like one studio took every photograph.
-3. Keeps lifestyle and in-use shots as gallery images on the product
-   detail page — where context belongs, not on the thumbnail.
-
-Background removal supports either Photoroom API (zero infrastructure) or
-self-hosted rembg (free, requires Python deps in venv).
-
-Built for distributors, resellers, B2B catalogs, and any Odoo shop carrying
-products from many different manufacturers.
-
-See README for installation, setup, recommended workflow, and troubleshooting.
+Built for CloudPepper-hosted Odoo 19 Community. No queue_job dependency, ir.cron only.
 """,
     'author': 'Your Company',
-    'maintainer': 'Your Company',
     'website': 'https://your-website.example',
-    'support': 'support@your-website.example',
     'category': 'Website/Website',
-    'license': 'OPL-1',
+    'license': 'LGPL-3',
     'depends': ['base', 'product', 'website_sale', 'mail'],
     'external_dependencies': {
         'python': [
@@ -39,9 +29,8 @@ See README for installation, setup, recommended workflow, and troubleshooting.
             'lxml',
             'Pillow',
             'numpy',
+            # rembg/onnxruntime are now OPTIONAL — used only when no Photoroom API key is configured
             'anthropic',
-            # rembg/onnxruntime are OPTIONAL — only needed if you skip Photoroom
-            # and use the local background-removal path instead.
         ],
     },
     'data': [
@@ -49,7 +38,6 @@ See README for installation, setup, recommended workflow, and troubleshooting.
         'data/ir_cron_data.xml',
         'views/res_config_settings_views.xml',
         'views/product_template_views.xml',
-        'views/product_category_views.xml',
         'views/enrichment_job_views.xml',
         'views/candidate_views.xml',
         'views/log_views.xml',
@@ -60,10 +48,7 @@ See README for installation, setup, recommended workflow, and troubleshooting.
         'wizards/review_candidates_wizard_views.xml',
         'wizards/preview_normalization_wizard_views.xml',
     ],
-    'images': ['static/description/banner.png'],
     'application': True,
     'installable': True,
     'auto_install': False,
-    'price': 149.00,
-    'currency': 'USD',
 }

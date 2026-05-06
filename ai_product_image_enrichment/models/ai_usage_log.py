@@ -29,8 +29,18 @@ class AIUsageLog(models.Model):
     @api.model
     def log_usage(self, model, input_tokens, output_tokens,
                   product=None, job=None, operation=None, duration_ms=0, error=None):
+        """Persist a Claude API call's cost via SEPARATE cursor.
+
+        Critical: the cost-cap and monthly-budget circuit breakers query this
+        table to decide whether to pause jobs. If we wrote on the main cursor
+        and the cron tick rolled back, the call's cost would vanish and the
+        breakers would think no money had been spent — letting the same
+        Claude call replay forever. Writing through a fresh cursor guarantees
+        the cost record persists no matter what happens to the surrounding
+        transaction.
+        """
         cost = self._estimate_cost(model, input_tokens, output_tokens)
-        return self.create({
+        vals = {
             'model': model,
             'input_tokens': input_tokens or 0,
             'output_tokens': output_tokens or 0,
@@ -40,7 +50,20 @@ class AIUsageLog(models.Model):
             'operation': operation,
             'duration_ms': duration_ms,
             'error': error,
-        })
+        }
+        try:
+            with self.env.registry.cursor() as side_cr:
+                side_env = self.env(cr=side_cr)
+                side_env['aipie.ai.usage.log'].sudo().create(vals)
+        except Exception as e:
+            # Last-resort fallback: write on main cursor. Better to risk losing
+            # the entry than to crash the pipeline.
+            import logging
+            logging.getLogger(__name__).warning('Side-cursor usage log failed (%s); falling back to main', e)
+            try:
+                self.create(vals)
+            except Exception:
+                pass
 
     @api.model
     def _estimate_cost(self, model, in_tok, out_tok):
@@ -53,5 +76,17 @@ class AIUsageLog(models.Model):
             SELECT COALESCE(SUM(cost_usd), 0)
             FROM aipie_ai_usage_log
             WHERE date_trunc('month', create_date) = date_trunc('month', now())
+        """)
+        return float(self.env.cr.fetchone()[0] or 0.0)
+
+    @api.model
+    def _last_hour_cost(self):
+        """Sum of cost_usd over the trailing 60 minutes. Used by the hard
+        per-call kill-switch independent of any job/cron state.
+        """
+        self.env.cr.execute("""
+            SELECT COALESCE(SUM(cost_usd), 0)
+            FROM aipie_ai_usage_log
+            WHERE create_date > now() - interval '1 hour'
         """)
         return float(self.env.cr.fetchone()[0] or 0.0)

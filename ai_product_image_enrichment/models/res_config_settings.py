@@ -17,12 +17,11 @@ PARAM_KEYS = [
     'aipie_max_images_per_product',
     'aipie_min_image_width',
     'aipie_rembg_model',
-    'aipie_overwrite_existing_main',
-    'aipie_require_review',
     'aipie_min_confidence_score',
     'aipie_user_agent',
     'aipie_request_delay_seconds',
     'aipie_concurrent_workers',
+    'aipie_hourly_ai_cap_usd',
     'aipie_monthly_ai_budget_usd',
     'aipie_alert_email',
     'aipie_keep_backup',
@@ -73,16 +72,6 @@ class ResConfigSettings(models.TransientModel):
         default='https://chrome.browserless.io',
         config_parameter='ai_product_image_enrichment.aipie_browserless_endpoint',
     )
-    aipie_strict_white_main = fields.Boolean(
-        string='Reject lifestyle shots as main image', default=True,
-        help='When ON: only studio-quality source images are accepted as the main image. '
-             'In-use / lifestyle / context shots (product on a real surface, with people, '
-             'in an environment) are downgraded to gallery candidates and never auto-applied '
-             'as main. Products with no studio source available go to "Needs Manual Main Image" '
-             'state. Note: this controls SOURCE filtering — the FINAL output is always a '
-             'transparent PNG regardless. Strongly recommended ON for clean shop grids.',
-        config_parameter='ai_product_image_enrichment.aipie_strict_white_main',
-    )
     aipie_recipe_cache_enabled = fields.Boolean(
         string='Self-learning Recipe Cache', default=True,
         help='After 5 successful AI classifications on a domain, distill a CSS-selector recipe '
@@ -96,13 +85,6 @@ class ResConfigSettings(models.TransientModel):
              'The AI pipeline reads this attribute to identify the brand. '
              'Falls back to the first word of the product name if the attribute is missing.',
         config_parameter='ai_product_image_enrichment.aipie_brand_attribute_name',
-    )
-    aipie_strict_brand_url_match = fields.Boolean(
-        string='Only accept images from the brand domain', default=True,
-        help='Reject any candidate image whose URL host does NOT contain the brand name. '
-             'Guarantees images come from the actual manufacturer source (or their CDN), '
-             'not from third-party aggregators or marketplaces. Strongly recommended.',
-        config_parameter='ai_product_image_enrichment.aipie_strict_brand_url_match',
     )
 
     # Normalization
@@ -159,7 +141,11 @@ class ResConfigSettings(models.TransientModel):
 
     # Pipeline
     aipie_max_images_per_product = fields.Integer(
-        string='Max Images / Product', default=4,
+        string='Max Gallery Images / Product', default=4,
+        help='Maximum number of GALLERY images (angle / detail / in-use / lifestyle / accessory) to '
+             'collect per product. Main image is allowed in addition when "Also discover main image" '
+             'is enabled — it does NOT count toward this cap. So with 4 here + main discovery on, '
+             'you get up to 1 main + 4 gallery = 5 candidates per product.',
         config_parameter='ai_product_image_enrichment.aipie_max_images_per_product',
     )
     aipie_min_image_width = fields.Integer(
@@ -172,22 +158,13 @@ class ResConfigSettings(models.TransientModel):
         ('isnet-general-use', 'isnet-general-use'),
     ], string='rembg Model', default='birefnet-general',
        config_parameter='ai_product_image_enrichment.aipie_rembg_model')
-    aipie_overwrite_existing_main = fields.Boolean(
-        string='Overwrite Existing Main Images', default=False,
-        config_parameter='ai_product_image_enrichment.aipie_overwrite_existing_main',
-    )
-
     # Safety
-    aipie_require_review = fields.Boolean(
-        string='Require Review of Candidates', default=True,
-        config_parameter='ai_product_image_enrichment.aipie_require_review',
-    )
     aipie_min_confidence_score = fields.Float(
         string='Min Confidence Score', default=0.7,
         config_parameter='ai_product_image_enrichment.aipie_min_confidence_score',
     )
     aipie_user_agent = fields.Char(
-        string='HTTP User-Agent', default='ProductImageBot/1.0',
+        string='HTTP User-Agent', default='LaudieImageBot/1.0 (+https://your-website.example/contact)',
         config_parameter='ai_product_image_enrichment.aipie_user_agent',
     )
     aipie_request_delay_seconds = fields.Float(
@@ -200,6 +177,14 @@ class ResConfigSettings(models.TransientModel):
     )
 
     # Cost
+    aipie_hourly_ai_cap_usd = fields.Float(
+        string='Hourly Anthropic Cap (USD)', default=5.0,
+        help='Hard kill-switch — refuses every Claude API call once spend in the '
+             'last 60 minutes exceeds this cap. Independent of job logic and cron '
+             'state. Even if every other guardrail fails, this one stops runaway '
+             'costs. Set 0 to disable.',
+        config_parameter='ai_product_image_enrichment.aipie_hourly_ai_cap_usd',
+    )
     aipie_monthly_ai_budget_usd = fields.Float(
         string='Monthly AI Budget (USD)', default=50.0,
         config_parameter='ai_product_image_enrichment.aipie_monthly_ai_budget_usd',
@@ -278,10 +263,8 @@ class ResConfigSettings(models.TransientModel):
             'photoroom_api_key': get('ai_product_image_enrichment.aipie_photoroom_api_key', ''),
             'browserless_api_key': get('ai_product_image_enrichment.aipie_browserless_api_key', ''),
             'browserless_endpoint': get('ai_product_image_enrichment.aipie_browserless_endpoint', 'https://chrome.browserless.io'),
-            'strict_white_main': _bool('aipie_strict_white_main', True),
             'recipe_cache_enabled': _bool('aipie_recipe_cache_enabled', True),
             'brand_attribute_name': get('ai_product_image_enrichment.aipie_brand_attribute_name', 'Brand'),
-            'strict_brand_url_match': _bool('aipie_strict_brand_url_match', True),
             'target_canvas_size': _int('aipie_target_canvas_size', 1920),
             'padding_percent': _int('aipie_padding_percent', 8),
             'bg_color': get('ai_product_image_enrichment.aipie_bg_color', '#FFFFFF'),
@@ -293,12 +276,11 @@ class ResConfigSettings(models.TransientModel):
             'max_images_per_product': _int('aipie_max_images_per_product', 4),
             'min_image_width': _int('aipie_min_image_width', 600),
             'rembg_model': get('ai_product_image_enrichment.aipie_rembg_model', 'birefnet-general'),
-            'overwrite_existing_main': _bool('aipie_overwrite_existing_main', False),
-            'require_review': _bool('aipie_require_review', True),
             'min_confidence_score': _float('aipie_min_confidence_score', 0.7),
-            'user_agent': get('ai_product_image_enrichment.aipie_user_agent', 'ProductImageBot/1.0'),
+            'user_agent': get('ai_product_image_enrichment.aipie_user_agent', 'LaudieImageBot/1.0 (+https://your-website.example/contact)'),
             'request_delay_seconds': _float('aipie_request_delay_seconds', 2.0),
             'concurrent_workers': _int('aipie_concurrent_workers', 2),
+            'hourly_ai_cap_usd': _float('aipie_hourly_ai_cap_usd', 5.0),
             'monthly_ai_budget_usd': _float('aipie_monthly_ai_budget_usd', 50.0),
             'alert_email': get('ai_product_image_enrichment.aipie_alert_email', ''),
             'keep_backup': _bool('aipie_keep_backup', True),
