@@ -615,8 +615,11 @@ def normalize_existing_main_image(product, config, env):
     product.image_1920 = base64.b64encode(normalized)
     product.aipie_main_image_normalized = True
     product.aipie_normalization_signature = _output_signature(normalized, config)
-    if product.aipie_enrichment_state == 'not_enriched':
-        product.aipie_enrichment_state = 'enriched'
+    # Deliberately do NOT touch aipie_enrichment_state — normalization is not
+    # enrichment (no AI image discovery happened, no candidates were found).
+    # aipie_main_image_normalized is the canonical truth source for "this main
+    # has been normalized to the uniform canvas". Keep enrichment_state pure
+    # so it only ever reflects AI enrichment outcomes.
 
     return {
         'was_white_bg': has_white,
